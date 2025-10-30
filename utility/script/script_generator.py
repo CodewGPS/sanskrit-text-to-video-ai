@@ -1,61 +1,57 @@
 import os
 from openai import OpenAI
 import json
+from dotenv import load_dotenv
 
-if len(os.environ.get("GROQ_API_KEY")) > 30:
-    from groq import Groq
-    model = "mixtral-8x7b-32768"
-    client = Groq(
-        api_key=os.environ.get("GROQ_API_KEY"),
-        )
-else:
-    OPENAI_API_KEY = os.getenv('OPENAI_KEY')
-    model = "gpt-4o"
-    client = OpenAI(api_key=OPENAI_API_KEY)
+load_dotenv()
+OPENAI_API_KEY = os.getenv('OPENAI_KEY')
+model = "gpt-4o-mini"
 
 def generate_script(topic):
     prompt = (
-        """You are a seasoned content writer for a YouTube Shorts channel, specializing in facts videos. 
-        Your facts shorts are concise, each lasting less than 50 seconds (approximately 140 words). 
-        They are incredibly engaging and original. When a user requests a specific type of facts short, you will create it.
+        """You are a creative storyteller who specializes in crafting short, impactful stories. 
+        Each story should be a continuous narrative, lasting less than 140 words. 
+        Your stories are engaging, original, and meaningful, designed to captivate readers from start to finish.
 
-        For instance, if the user asks for:
-        Weird facts
+        When a user provides a phrase or text, you will create a short story inspired by it. 
+        The story must flow smoothly, have a clear beginning, middle, and end, and deliver a memorable message or twist.
+
+        For example, if the user asks for:
+        "A lost dog finds its way home"
         You would produce content like this:
 
-        Weird facts you don't know:
-        - Bananas are berries, but strawberries aren't.
-        - A single cloud can weigh over a million pounds.
-        - There's a species of jellyfish that is biologically immortal.
-        - Honey never spoils; archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old and still edible.
-        - The shortest war in history was between Britain and Zanzibar on August 27, 1896. Zanzibar surrendered after 38 minutes.
-        - Octopuses have three hearts and blue blood.
+        {"script": "Once upon a rainy evening, Max, a little brown dog, wandered far from home. He braved busy streets and dark alleys, guided only by the faint scent of his favorite blanket. Just as hope seemed lost, a kind stranger noticed Max’s collar and led him back to his worried family. That night, Max curled up, safe and sound, proving that even the smallest hearts can find their way home."}
 
-        You are now tasked with creating the best short script based on the user's requested type of 'facts'.
+        You are now tasked with creating the best short story based on the user's requested phrase or text.
 
         Keep it brief, highly interesting, and unique.
 
-        Stictly output the script in a JSON format like below, and only provide a parsable JSON object with the key 'script'.
+        Strictly output the story in a JSON format like below, and only provide a parsable JSON object with the key 'script'.
 
         # Output
-        {"script": "Here is the script ..."}
+        {"script": "Here is the story ..."}
         """
     )
-
+    
+    client = OpenAI(api_key=OPENAI_API_KEY)
     response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": topic}
-            ]
-        )
-    content = response.choices[0].message.content
+        model=model,
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": topic}
+        ]
+    )
+    content = response.choices[0].message.content.strip()
+    # Try to parse JSON directly
     try:
         script = json.loads(content)["script"]
-    except Exception as e:
+    except Exception:
+        # Attempt to extract JSON substring if extra text is present
         json_start_index = content.find('{')
         json_end_index = content.rfind('}')
-        print(content)
-        content = content[json_start_index:json_end_index+1]
-        script = json.loads(content)["script"]
+        if json_start_index != -1 and json_end_index != -1:
+            json_str = content[json_start_index:json_end_index+1]
+            script = json.loads(json_str)["script"]
+        else:
+            raise ValueError("Could not find valid JSON in response:\n" + content)
     return script

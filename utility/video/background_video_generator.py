@@ -1,7 +1,9 @@
 import os 
 import requests
 from utility.utils import log_response,LOG_TYPE_PEXEL
+from dotenv import load_dotenv
 
+load_dotenv()
 PEXELS_API_KEY = os.environ.get('PEXELS_KEY')
 
 def search_videos(query_string, orientation_landscape=True):
@@ -57,7 +59,7 @@ def generate_video_url(timed_video_searches,video_server):
         if video_server == "pexel":
             used_links = []
             for (t1, t2), search_terms in timed_video_searches:
-                url = ""
+                url = None
                 for query in search_terms:
                   
                     url = getBestVideo(query, orientation_landscape=True, used_vids=used_links)

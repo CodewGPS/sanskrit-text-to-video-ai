@@ -4,15 +4,17 @@ import json
 import re
 from datetime import datetime
 from utility.utils import log_response,LOG_TYPE_GPT
+from dotenv import load_dotenv
+load_dotenv()
 
 if len(os.environ.get("GROQ_API_KEY")) > 30:
     from groq import Groq
-    model = "llama3-70b-8192"
+    model = "llama-3.3-70b-versatile"
     client = Groq(
         api_key=os.environ.get("GROQ_API_KEY"),
         )
 else:
-    model = "gpt-4o"
+    model = "gpt-4o-mini"
     OPENAI_API_KEY = os.environ.get('OPENAI_KEY')
     client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -48,20 +50,34 @@ def fix_json(json_str):
     json_str = json_str.replace('"you didn"t"', '"you didn\'t"')
     return json_str
 
+def _extract_json_array(text):
+    # Remove common code fences
+    cleaned = text.replace("```json", "").replace("```", "").strip()
+    # Normalize smart quotes
+    cleaned = cleaned.replace("“", '"').replace("”", '"').replace("‘", '"').replace("’", '"')
+    # Try to find array bounds
+    start = cleaned.find('[')
+    end = cleaned.rfind(']')
+    if start != -1 and end != -1 and end > start:
+        candidate = cleaned[start:end+1]
+        return candidate
+    return cleaned
+
 def getVideoSearchQueriesTimed(script,captions_timed):
     end = captions_timed[-1][0][1]
     try:
         
         out = [[[0,0],""]]
         while out[-1][0][1] != end:
-            content = call_OpenAI(script,captions_timed).replace("'",'"')
+            content = call_OpenAI(script,captions_timed)
             try:
-                out = json.loads(content)
+                candidate = _extract_json_array(content)
+                out = json.loads(candidate)
             except Exception as e:
                 print("content: \n", content, "\n\n")
                 print(e)
-                content = fix_json(content.replace("```json", "").replace("```", ""))
-                out = json.loads(content)
+                candidate = fix_json(_extract_json_array(content))
+                out = json.loads(candidate)
         return out
     except Exception as e:
         print("error in response",e)
@@ -90,6 +106,8 @@ Timed Captions:{}
     return text
 
 def merge_empty_intervals(segments):
+    if segments is None:
+        return None
     merged = []
     i = 0
     while i < len(segments):
