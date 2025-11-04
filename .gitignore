@@ -3,3 +3,9 @@ venv/
 __pycache__/
 .DS_Store
 .env
+.chainlit/
+.logs/
+.files/
+rendered_video.mp4
+apis.txt
+audio_tts.wav
