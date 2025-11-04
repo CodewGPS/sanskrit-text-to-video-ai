@@ -6,8 +6,16 @@ from dotenv import load_dotenv
 load_dotenv()
 PEXELS_API_KEY = os.environ.get('PEXELS_KEY')
 
+def get_images_for_video(timed_video_searches):
+    # Placeholder for future Stable Diffusion support
+    return [[interval, None] for interval, _ in timed_video_searches]
+
 def search_videos(query_string, orientation_landscape=True):
    
+    if not PEXELS_API_KEY:
+        print("[PEXELS] Missing PEXELS_KEY env var. Skipping search for:", query_string)
+        return {"videos": []}
+
     url = "https://api.pexels.com/videos/search"
     headers = {
         "Authorization": PEXELS_API_KEY,
@@ -19,16 +27,25 @@ def search_videos(query_string, orientation_landscape=True):
         "per_page": 15
     }
 
-    response = requests.get(url, headers=headers, params=params)
-    json_data = response.json()
-    log_response(LOG_TYPE_PEXEL,query_string,response.json())
-   
-    return json_data
+    try:
+        print(f"[PEXELS] Searching: '{query_string}' (landscape={orientation_landscape})")
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        response.raise_for_status()
+        json_data = response.json()
+        log_response(LOG_TYPE_PEXEL,query_string,json_data)
+        print(f"[PEXELS] Received {len(json_data.get('videos', []))} videos for '{query_string}'")
+        return json_data
+    except Exception as e:
+        print(f"[PEXELS] Error for '{query_string}':", e)
+        return {"videos": []}
 
 
-def getBestVideo(query_string, orientation_landscape=True, used_vids=[]):
+def getBestVideo(query_string, orientation_landscape=True, used_vids=None):
+    if used_vids is None:
+        used_vids = []
     vids = search_videos(query_string, orientation_landscape)
-    videos = vids['videos']  # Extract the videos list from JSON
+    videos = vids.get('videos', [])  # Extract the videos list from JSON
+    print(f"[PEXELS] Filtering best video for '{query_string}', candidates: {len(videos)}")
 
     # Filter and extract videos with width and height as 1920x1080 for landscape or 1080x1920 for portrait
     if orientation_landscape:
@@ -50,7 +67,7 @@ def getBestVideo(query_string, orientation_landscape=True, used_vids=[]):
                 if video_file['width'] == 1080 and video_file['height'] == 1920:
                     if not (video_file['link'].split('.hd')[0] in used_vids):
                         return video_file['link']
-    print("NO LINKS found for this round of search with query :", query_string)
+    print("[PEXELS] No suitable link found for:", query_string)
     return None
 
 
@@ -61,11 +78,12 @@ def generate_video_url(timed_video_searches,video_server):
             for (t1, t2), search_terms in timed_video_searches:
                 url = None
                 for query in search_terms:
-                  
+                    print(f"[PEXELS] Trying query '{query}' for interval [{t1}, {t2}]...")
                     url = getBestVideo(query, orientation_landscape=True, used_vids=used_links)
                     if url:
                         used_links.append(url.split('.hd')[0])
                         break
+                print(f"[PEXELS] Selected URL for interval [{t1}, {t2}]: {url}")
                 timed_video_urls.append([[t1, t2], url])
         elif video_server == "stable_diffusion":
             timed_video_urls = get_images_for_video(timed_video_searches)

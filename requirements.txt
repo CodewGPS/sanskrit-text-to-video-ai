@@ -15,7 +15,7 @@ frozenlist==1.4.1
 fsspec==2024.6.0
 h11==0.14.0
 httpcore==1.0.5
-httpx==0.27.0
+httpx==0.26.0
 idna==3.7
 imageio==2.34.1
 imageio-ffmpeg==0.5.1
@@ -48,3 +48,4 @@ urllib3==2.2.1
 whisper-timestamped==1.15.4
 yarl==1.9.4
 groq==0.11.0
+chainlit

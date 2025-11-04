@@ -7,16 +7,9 @@ from utility.utils import log_response,LOG_TYPE_GPT
 from dotenv import load_dotenv
 load_dotenv()
 
-if len(os.environ.get("GROQ_API_KEY")) > 30:
-    from groq import Groq
-    model = "llama-3.3-70b-versatile"
-    client = Groq(
-        api_key=os.environ.get("GROQ_API_KEY"),
-        )
-else:
-    model = "gpt-4o-mini"
-    OPENAI_API_KEY = os.environ.get('OPENAI_KEY')
-    client = OpenAI(api_key=OPENAI_API_KEY)
+model = "gpt-4o-mini"
+OPENAI_API_KEY = os.environ.get('OPENAI_KEY')
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 log_directory = ".logs/gpt_logs"
 

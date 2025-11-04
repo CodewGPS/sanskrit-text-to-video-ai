@@ -19,12 +19,12 @@ async def generate_audio(text: str, outputFilename: str,
     ext = Path(outputFilename).suffix.lower().lstrip(".")
     fmt = response_format or (ext if ext in {"mp3", "wav", "opus", "flac", "aac"} else "mp3")
 
-    # OpenAI TTS is synchronous; call and stream to file
-    resp = client.audio.speech.create(
+    # OpenAI TTS: use streaming response to write directly to file (SDK >=1.0)
+    with client.audio.speech.with_streaming_response.create(
         model=model,
         voice=voice,
         input=text,
         response_format=fmt,
-        speed=speed
-    )
-    resp.stream_to_file(outputFilename)
+        speed=speed,
+    ) as response:
+        response.stream_to_file(outputFilename)
